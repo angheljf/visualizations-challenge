@@ -1,63 +1,69 @@
 function buildMetadata(sample) {
-    d3.json("samples.json").then((data) => {
-      var metadata= data.metadata;
-      var resultsarray= metadata.filter(sampleobject => sampleobject.id == sample);
-      var result= resultsarray[0]
-      var PANEL = d3.select("#sample-metadata");
-      PANEL.html("");
-      Object.entries(result).forEach(([key, value]) => {
-        PANEL.append("h6").text(`${key}: ${value}`);
-      });
-      buildGauge(result.wfreq);
-    });
-  }
+  d3.json("samples.json").then((data) => {
+    var metadata = data.metadata;
+    // Filter the data for the object with the desired sample number
+    var resultArray = metadata.filter(sampleObj => sampleObj.id == sample);
+    var result = resultArray[0];
+    // Use d3 to select the panel with id of `#sample-metadata`
+    var PANEL = d3.select("#sample-metadata");
 
+    // Use `.html("") to clear any existing metadata
+    PANEL.html("");
+
+    // Use `Object.entries` to add each key and value pair to the panel
+    // Hint: Inside the loop, you will need to use d3 to append new
+    // tags for each key-value in the metadata.
+    Object.entries(result).forEach(([key, value]) => {
+      PANEL.append("h6").text(`${key.toUpperCase()}: ${value}`);
+    });
+
+    // BONUS: Build the Gauge Chart
+    buildGauge(result.wfreq);
+  });
+}
 
 function buildCharts(sample) {
-
-  // Use `d3.json` to fetch the sample data for the plots
   d3.json("samples.json").then((data) => {
-    var samples= data.samples;
-    var resultsArray= samples.filter(sampleobject => sampleobject.id == sample);
-    var result= resultsArray[0]
-    var ids = result.otu_ids;
-    var labels = result.otu_labels;
-    var values = result.sample_values;
-    console.log(ids);
-    // Build a Bubble Chart using the sample data
-    var LayoutBubble = {
-      height: 450,
-      width: 1140,
-      title: "Bacteria Culture Per Sample",
-      xaxis: { title: "OTU ID" },
-      hovermode: "closest",
-      };
+    var samples = data.samples;
+    var resultArray = samples.filter(sampleObj => sampleObj.id == sample);
+    var result = resultArray[0];
 
-      var DataBubble = [
+    var otu_ids = result.otu_ids;
+    var otu_labels = result.otu_labels;
+    var sample_values = result.sample_values;
+
+    // Build a Bubble Chart
+    var bubbleLayout = {
+      title: "Bacteria Cultures Per Sample",
+      margin: { t: 0 },
+      hovermode: "closest",
+      xaxis: { title: "OTU ID" },
+      margin: { t: 30}
+    };
+    var bubbleData = [
       {
-        x: ids,
-        y: values,
-        text: labels,
+        x: otu_ids,
+        y: sample_values,
+        text: otu_labels,
         mode: "markers",
         marker: {
-          color: ids,
-          size: values,
-          }
+          size: sample_values,
+          color: otu_ids,
+          colorscale: "Earth"
+        }
       }
     ];
 
-    Plotly.plot("bubble", DataBubble, LayoutBubble);
+    Plotly.newPlot("bubble", bubbleData, bubbleLayout);
 
-    //  Build a bar Chart
-    
-    var bar_data =[
+    var yticks = otu_ids.slice(0, 10).map(otuID => `OTU ${otuID}`).reverse();
+    var barData = [
       {
-        y:ids.slice(0, 10).map(otuID => `OTU ${otuID}`).reverse(),
-        x:values.slice(0,10).reverse(),
-        text:labels.slice(0,10).reverse(),
-        type:"bar",
-        orientation:"h"
-
+        y: yticks,
+        x: sample_values.slice(0, 10).reverse(),
+        text: otu_labels.slice(0, 10).reverse(),
+        type: "bar",
+        orientation: "h",
       }
     ];
 
@@ -66,11 +72,10 @@ function buildCharts(sample) {
       margin: { t: 30, l: 150 }
     };
 
-    Plotly.newPlot("bar", bar_data, barLayout);
+    Plotly.newPlot("bar", barData, barLayout);
   });
 }
-   
- 
+
 function init() {
   // Grab a reference to the dropdown select element
   var selector = d3.select("#selDataset");
@@ -78,6 +83,7 @@ function init() {
   // Use the list of sample names to populate the select options
   d3.json("samples.json").then((data) => {
     var sampleNames = data.names;
+
     sampleNames.forEach((sample) => {
       selector
         .append("option")
@@ -98,7 +104,10 @@ function optionChanged(newSample) {
   buildMetadata(newSample);
 }
 
-function buildGauge(wfreq) {
+/**
+ * BONUS Solution
+ * */
+ function buildGauge(wfreq) {
   // Enter the washing frequency between 0 and 180
   var level = parseFloat(wfreq) * 20;
 
@@ -187,5 +196,6 @@ function buildGauge(wfreq) {
   var GAUGE = document.getElementById("gauge");
   Plotly.newPlot(GAUGE, data, layout);
 }
+
 // Initialize the dashboard
 init();
